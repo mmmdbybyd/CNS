@@ -43,5 +43,6 @@ go build -o cns
   
 ##### Linux一键:  
 ~~~~~
-`type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://pros.cutebi.xyz:666/cns/cns.sh && sh cns.sh
+安装: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://pros.cutebi.xyz:666/cns/cns.sh && sh cns.sh
+卸载: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://pros.cutebi.xyz:666/cns/cns.sh && sh cns.sh uninstall
 
