@@ -2,7 +2,7 @@
 网络代理服务端, 支持IPV6，tcpFastOpen，UDP_Over_HttpTunnel(需要配合专门的客户端)  
     1. 普通的CONNECT代理服务器(暂时不考虑添加普通http支持)  
     2. 实现与114DNS以及腾讯的dnsPod一样的httpDNS服务端  
-    3. 配合专门的客户端可以实现TCP/UDP全局代理
+    3. 配合专门的客户端可以实现TCP/UDP全局代理, 目前只有: https://github.com/mmmdbybyd/CLNC
   
 单独服务端:  
 --------
