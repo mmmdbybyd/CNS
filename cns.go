@@ -16,11 +16,11 @@ import (
 )
 
 var (
-	listener                                *net.TCPListener
-	udpFlag                                 string
-	proxyKey                                []byte
-	tcp_timeout, udp_timeout, tcp_keepAlive time.Duration
-	enable_httpDNS, enable_TFO              bool
+	listener                                          *net.TCPListener
+	udpFlag                                           string
+	proxyKey                                          []byte
+	tcp_timeout, udp_timeout, tcp_keepAlive           time.Duration
+	enable_dns_tcpOverUdp, enable_httpDNS, enable_TFO bool
 )
 
 func isHttpHeader(header []byte) bool {
@@ -58,8 +58,8 @@ func handleConn(cConn *net.TCPConn, payload []byte) {
 	cConn.SetKeepAlivePeriod(tcp_keepAlive)
 	cConn.SetReadDeadline(time.Now().Add(tcp_timeout))
 
-	RLen, _ := cConn.Read(payload)
-	if RLen <= 0 {
+	RLen, err := cConn.Read(payload)
+	if err != nil || RLen <= 0 {
 		cConn.Close()
 		return
 	}
@@ -67,7 +67,8 @@ func handleConn(cConn *net.TCPConn, payload []byte) {
 		handleUdpSession(cConn, payload[:RLen])
 	} else {
 		if enable_httpDNS == false || Respond_HttpDNS(cConn, payload[:RLen]) == false { /*优先处理httpDNS请求*/
-			if WLen, _ := cConn.Write(rspHeader(payload[:RLen])); WLen <= 0 {
+			if WLen, err := cConn.Write(rspHeader(payload[:RLen])); err != nil || WLen <= 0 {
+				cConn.Close()
 				return
 			}
 			if bytes.Contains(payload[:RLen], []byte(udpFlag)) == true {
@@ -93,17 +94,18 @@ func pidSaveToFile(pidPath string) {
 }
 
 func handleCmd() {
-	var listenAddrString, proxyKeyString, encryptPassword, pidPath string
+	var listenAddrString, proxyKeyString, CuteBi_XorCrypt_passwordStr, pidPath string
 	var help, enable_daemon bool
 
 	flag.StringVar(&proxyKeyString, "proxy-key", "Host", "tcp request proxy host key")
 	flag.StringVar(&udpFlag, "udp-flag", "httpUDP", "udp request flag string")
 	flag.StringVar(&listenAddrString, "listen-addr", ":8989", "listen aaddress")
-	flag.StringVar(&encryptPassword, "encrypt-password", "", "encrypt password")
+	flag.StringVar(&CuteBi_XorCrypt_passwordStr, "encrypt-password", "", "encrypt password")
 	flag.Int64Var((*int64)(&tcp_timeout), "tcp-timeout", 600, "tcp timeout second")
 	flag.Int64Var((*int64)(&udp_timeout), "udp-timeout", 30, "udp timeout second")
-	flag.Int64Var((*int64)(&tcp_keepAlive), "tcp-keepalive", 15, "tcp keepalive second")
+	flag.Int64Var((*int64)(&tcp_keepAlive), "tcp-keepalive", 60, "tcp keepalive second")
 	flag.StringVar(&pidPath, "pid-path", "", "pid file path")
+	flag.BoolVar(&enable_dns_tcpOverUdp, "dns-tcpOverUdp", false, "tcpDNS Over udpDNS switch")
 	flag.BoolVar(&enable_httpDNS, "enable-httpDNS", false, "httpDNS server switch")
 	flag.BoolVar(&enable_TFO, "enable-TFO", false, "listener tcpFastOpen switch")
 	flag.BoolVar(&enable_daemon, "daemon", false, "daemon mode switch")
@@ -126,7 +128,7 @@ func handleCmd() {
 	listener, err = net.ListenTCP("tcp", listenAddr)
 	if err != nil {
 		log.Println(err)
-		return
+		os.Exit(1)
 	}
 	if enable_TFO == true {
 		enableTcpFastopen(listener)
@@ -135,10 +137,10 @@ func handleCmd() {
 		pidSaveToFile(pidPath)
 	}
 	proxyKey = []byte("\n" + proxyKeyString + ": ")
+	CuteBi_XorCrypt_password = []byte(CuteBi_XorCrypt_passwordStr)
 	tcp_timeout *= time.Second
 	udp_timeout *= time.Second
 	tcp_keepAlive *= time.Second
-	make_CuteBi_encrypt_PassCode([]byte(encryptPassword))
 }
 
 func initProcess() {
@@ -161,6 +163,7 @@ func main() {
 		conn, err = listener.AcceptTCP()
 		if err != nil {
 			log.Println(err)
+			time.Sleep(3 * time.Second)
 			continue
 		}
 		go handleConn(conn, make([]byte, 8192))

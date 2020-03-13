@@ -6,51 +6,54 @@ import (
 	//"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 )
 
 /* 把fromConn的数据转发到toConn */
-func tcpForward(fromConn, toConn net.Conn, payload []byte, ENorDE_Func func([]byte, byte) byte, dynamic_code byte) {
+func tcpForward(fromConn, toConn *net.TCPConn, payload []byte) {
 	defer fromConn.Close()
 	defer toConn.Close()
 
-	var RLen, WLen int
+	var RLen, WLen, CuteBi_XorCrypt_passwordSub int
+	var err error
 	for {
 		fromConn.SetReadDeadline(time.Now().Add(tcp_timeout))
-		if RLen, _ = fromConn.Read(payload[:]); RLen <= 0 {
+		toConn.SetReadDeadline(time.Now().Add(tcp_timeout))
+		if RLen, err = fromConn.Read(payload); err != nil || RLen <= 0 {
 			return
 		}
-		if passLen_code != 0 {
-			dynamic_code = ENorDE_Func(payload[:RLen], dynamic_code)
+		if len(CuteBi_XorCrypt_password) != 0 {
+			CuteBi_XorCrypt_passwordSub = CuteBi_XorCrypt(payload[:RLen], CuteBi_XorCrypt_passwordSub)
 		}
 		toConn.SetWriteDeadline(time.Now().Add(tcp_timeout))
-		if WLen, _ = toConn.Write(payload[:RLen]); WLen <= 0 {
+		if WLen, err = toConn.Write(payload[:RLen]); err != nil || WLen <= 0 {
 			return
 		}
 	}
 }
 
 /* 从header中获取host */
-func getProxyHost(header []byte) (string, byte) {
+func getProxyHost(header []byte) string {
 	hostSub := bytes.Index(header, proxyKey)
 	if hostSub < 0 {
-		return "", 0
+		return ""
 	}
 	hostSub += len(proxyKey)
 	hostEndSub := bytes.IndexByte(header[hostSub:], '\r')
 	if hostEndSub < 0 {
-		return "", 0
+		return ""
 	}
 	hostEndSub += hostSub
-	if passLen_code != 0 {
-		host, dynamic_code, err := CuteBi_decrypt_host(header[hostSub:hostEndSub])
+	if len(CuteBi_XorCrypt_password) != 0 {
+		host, err := CuteBi_decrypt_host(header[hostSub:hostEndSub])
 		if err != nil {
 			log.Println(err)
-			return "", 0
+			return ""
 		}
-		return string(host), dynamic_code
+		return string(host)
 	} else {
-		return string(header[hostSub:hostEndSub]), 0
+		return string(header[hostSub:hostEndSub])
 	}
 }
 
@@ -59,7 +62,7 @@ func handleTcpSession(cConn *net.TCPConn, header []byte) {
 	defer log.Println("A tcp client close")
 
 	/* 获取请求头中的host */
-	host, dynamic_code := getProxyHost(header)
+	host := getProxyHost(header)
 	if host == "" {
 		log.Println("No proxy host: {" + string(header) + "}")
 		cConn.Write([]byte("No proxy host"))
@@ -67,12 +70,23 @@ func handleTcpSession(cConn *net.TCPConn, header []byte) {
 		return
 	}
 	log.Println("proxyHost: " + host)
+	//tcpDNS over udpDNS
+	if enable_dns_tcpOverUdp && strings.HasSuffix(host, ":53") == true {
+		dns_tcpOverUdp(cConn, host, header)
+		return
+	}
 	/* 连接目标地址 */
-	sAddr, _ := net.ResolveTCPAddr("tcp", host)
-	sConn, err := net.DialTCP("tcp", nil, sAddr)
-	if err != nil {
-		log.Println(err)
-		cConn.Write([]byte("Proxy address [" + host + "] error"))
+	sAddr, resErr := net.ResolveTCPAddr("tcp", host)
+	if resErr != nil {
+		log.Println(resErr)
+		cConn.Write([]byte("Proxy address [" + host + "] ResolveTCP() error"))
+		cConn.Close()
+		return
+	}
+	sConn, dialErr := net.DialTCP("tcp", nil, sAddr)
+	if dialErr != nil {
+		log.Println(dialErr)
+		cConn.Write([]byte("Proxy address [" + host + "] DialTCP() error"))
 		cConn.Close()
 		return
 	}
@@ -80,6 +94,6 @@ func handleTcpSession(cConn *net.TCPConn, header []byte) {
 	sConn.SetKeepAlivePeriod(tcp_keepAlive)
 	/* 开始转发 */
 	log.Println("Start tcpForward")
-	go tcpForward(cConn, sConn, make([]byte, 8192), CuteBi_decrypt, dynamic_code)
-	tcpForward(sConn, cConn, header, CuteBi_encrypt, dynamic_code)
+	go tcpForward(cConn, sConn, make([]byte, 8192))
+	tcpForward(sConn, cConn, header)
 }
