@@ -56,7 +56,7 @@ func rspHeader(header []byte) []byte {
 func handleConn(cConn *net.TCPConn, payload []byte) {
 	cConn.SetKeepAlive(true)
 	cConn.SetKeepAlivePeriod(tcp_keepAlive)
-	cConn.SetReadDeadline(time.Now().Add(tcp_timeout))
+	//cConn.SetReadDeadline(time.Now().Add(tcp_timeout))
 
 	RLen, err := cConn.Read(payload)
 	if err != nil || RLen <= 0 {
@@ -74,7 +74,7 @@ func handleConn(cConn *net.TCPConn, payload []byte) {
 			if bytes.Contains(payload[:RLen], []byte(udpFlag)) == true {
 				handleConn(cConn, payload) //httpUDP需要读取到二进制数据才进行处理
 			} else {
-				handleTcpSession(cConn, payload[:RLen])
+				handleTcpSession(cConn, payload)
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.1\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
+			"CuteBi Network Server 0.2.1\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}

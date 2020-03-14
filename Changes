@@ -2,3 +2,8 @@
     改进加密(以后应该不需要改进了)
     添加tcpDNS Over udpDNS，让客户端的tcpDNS解析更快
     修复了一些小bug，至于CPU占用100%，目前还不知道有没有解决
+
+0.2.1
+    修复tcpDNS Over udpDNS可能出现的一些问题
+    修复CPU占用过大
+    请求头中的host如果没有端口默认使用80端口

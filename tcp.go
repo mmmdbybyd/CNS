@@ -15,19 +15,19 @@ func tcpForward(fromConn, toConn *net.TCPConn, payload []byte) {
 	defer fromConn.Close()
 	defer toConn.Close()
 
-	var RLen, WLen, CuteBi_XorCrypt_passwordSub int
+	var RLen, CuteBi_XorCrypt_passwordSub int
 	var err error
 	for {
 		fromConn.SetReadDeadline(time.Now().Add(tcp_timeout))
 		toConn.SetReadDeadline(time.Now().Add(tcp_timeout))
-		if RLen, err = fromConn.Read(payload); err != nil || RLen <= 0 {
+		if RLen, err = fromConn.Read(payload); err != nil {
 			return
 		}
 		if len(CuteBi_XorCrypt_password) != 0 {
 			CuteBi_XorCrypt_passwordSub = CuteBi_XorCrypt(payload[:RLen], CuteBi_XorCrypt_passwordSub)
 		}
 		toConn.SetWriteDeadline(time.Now().Add(tcp_timeout))
-		if WLen, err = toConn.Write(payload[:RLen]); err != nil || WLen <= 0 {
+		if _, err = toConn.Write(payload[:RLen]); err != nil {
 			return
 		}
 	}
@@ -76,6 +76,9 @@ func handleTcpSession(cConn *net.TCPConn, header []byte) {
 		return
 	}
 	/* 连接目标地址 */
+	if strings.Contains(host, ":") == false {
+		host += ":80"
+	}
 	sAddr, resErr := net.ResolveTCPAddr("tcp", host)
 	if resErr != nil {
 		log.Println(resErr)
