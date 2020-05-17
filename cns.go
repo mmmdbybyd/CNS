@@ -116,7 +116,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.2.1\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
+			"CuteBi Network Server 0.2.2\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
