@@ -19,7 +19,7 @@ type TlsServer struct {
 	CertFile, KeyFile          string
 }
 
-func createSSLcertificate(hosts []string) ([]byte, []byte) {
+func createSSLcertificate(hosts string) ([]byte, []byte) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	notBefore := time.Now()
 	notAfter := notBefore.Add(365 * 24 * time.Hour)
@@ -68,16 +68,16 @@ func (tlsConfig *TlsServer) startTls() {
 			return
 		}
 		certs = append(certs, cer)
-		certs[len(certs)-1] = cer
 	}
 	if tlsConfig.AutoCertHosts != nil {
-		cer, err := tls.X509KeyPair(createSSLcertificate(tlsConfig.AutoCertHosts))
-		if err != nil {
-			log.Println(err)
-			return
+		for _, h := range tlsConfig.AutoCertHosts {
+			cer, err := tls.X509KeyPair(createSSLcertificate(h))
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			certs = append(certs, cer)
 		}
-		certs = append(certs, cer)
-		certs[len(certs)-1] = cer
 	}
 
 	handleFun := func(listenAddrString string) {
