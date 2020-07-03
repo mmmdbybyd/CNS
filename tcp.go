@@ -11,22 +11,22 @@ import (
 )
 
 /* 把fromConn的数据转发到toConn */
-func tcpForward(fromConn, toConn *net.TCPConn, payload []byte) {
+func tcpForward(fromConn, toConn net.Conn, payload []byte) {
 	defer fromConn.Close()
 	defer toConn.Close()
 
 	var RLen, CuteBi_XorCrypt_passwordSub int
 	var err error
 	for {
-		fromConn.SetReadDeadline(time.Now().Add(tcp_timeout))
-		toConn.SetReadDeadline(time.Now().Add(tcp_timeout))
+		fromConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
+		toConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
 		if RLen, err = fromConn.Read(payload); err != nil {
 			return
 		}
 		if len(CuteBi_XorCrypt_password) != 0 {
 			CuteBi_XorCrypt_passwordSub = CuteBi_XorCrypt(payload[:RLen], CuteBi_XorCrypt_passwordSub)
 		}
-		toConn.SetWriteDeadline(time.Now().Add(tcp_timeout))
+		toConn.SetWriteDeadline(time.Now().Add(config.Tcp_timeout))
 		if _, err = toConn.Write(payload[:RLen]); err != nil {
 			return
 		}
@@ -35,11 +35,11 @@ func tcpForward(fromConn, toConn *net.TCPConn, payload []byte) {
 
 /* 从header中获取host */
 func getProxyHost(header []byte) string {
-	hostSub := bytes.Index(header, proxyKey)
+	hostSub := bytes.Index(header, []byte(config.Proxy_key))
 	if hostSub < 0 {
 		return ""
 	}
-	hostSub += len(proxyKey)
+	hostSub += len(config.Proxy_key)
 	hostEndSub := bytes.IndexByte(header[hostSub:], '\r')
 	if hostEndSub < 0 {
 		return ""
@@ -58,8 +58,8 @@ func getProxyHost(header []byte) string {
 }
 
 /* 处理tcp会话 */
-func handleTcpSession(cConn *net.TCPConn, header []byte) {
-	defer log.Println("A tcp client close")
+func handleTcpSession(cConn net.Conn, header []byte) {
+	//defer log.Println("A tcp client close")
 
 	/* 获取请求头中的host */
 	host := getProxyHost(header)
@@ -69,9 +69,9 @@ func handleTcpSession(cConn *net.TCPConn, header []byte) {
 		cConn.Close()
 		return
 	}
-	log.Println("proxyHost: " + host)
+	//log.Println("proxyHost: " + host)
 	//tcpDNS over udpDNS
-	if enable_dns_tcpOverUdp && strings.HasSuffix(host, ":53") == true {
+	if config.Enable_dns_tcpOverUdp && strings.HasSuffix(host, ":53") == true {
 		dns_tcpOverUdp(cConn, host, header)
 		return
 	}
@@ -79,24 +79,15 @@ func handleTcpSession(cConn *net.TCPConn, header []byte) {
 	if strings.Contains(host, ":") == false {
 		host += ":80"
 	}
-	sAddr, resErr := net.ResolveTCPAddr("tcp", host)
-	if resErr != nil {
-		log.Println(resErr)
-		cConn.Write([]byte("Proxy address [" + host + "] ResolveTCP() error"))
-		cConn.Close()
-		return
-	}
-	sConn, dialErr := net.DialTCP("tcp", nil, sAddr)
+	sConn, dialErr := net.Dial("tcp", host)
 	if dialErr != nil {
 		log.Println(dialErr)
 		cConn.Write([]byte("Proxy address [" + host + "] DialTCP() error"))
 		cConn.Close()
 		return
 	}
-	sConn.SetKeepAlive(true)
-	sConn.SetKeepAlivePeriod(tcp_keepAlive)
 	/* 开始转发 */
-	log.Println("Start tcpForward")
+	//log.Println("Start tcpForward")
 	go tcpForward(cConn, sConn, make([]byte, 8192))
 	tcpForward(sConn, cConn, header)
 }

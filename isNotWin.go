@@ -5,8 +5,10 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net"
+	/*
+		"log"
+		"net"
+	*/
 	"syscall"
 )
 
@@ -24,6 +26,7 @@ func setsid() {
 	syscall.Setsid()
 }
 
+/*
 func enableTcpFastopen(listener *net.TCPListener) {
 	const CNS_TCP_FASTOPEN int = 0x17
 	f, _ := listener.File()
@@ -31,3 +34,4 @@ func enableTcpFastopen(listener *net.TCPListener) {
 		log.Println(err)
 	}
 }
+*/

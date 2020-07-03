@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func dns_tcpOverUdp(cConn *net.TCPConn, host string, buffer []byte) {
+func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
 	log.Println("Start dns_tcpOverUdp")
 	defer cConn.Close()
 
@@ -18,7 +18,7 @@ func dns_tcpOverUdp(cConn *net.TCPConn, host string, buffer []byte) {
 	var WLen, RLen, payloadLen, CuteBi_XorCrypt_passwordSub int
 	var pkgLen uint16
 	for {
-		cConn.SetReadDeadline(time.Now().Add(tcp_timeout))
+		cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
 		RLen, err = cConn.Read(buffer[payloadLen:])
 		if RLen <= 0 || err != nil {
 			return
@@ -51,7 +51,7 @@ func dns_tcpOverUdp(cConn *net.TCPConn, host string, buffer []byte) {
 	if WLen, err = sConn.Write(buffer[2:payloadLen]); WLen <= 0 || err != nil {
 		return
 	}
-	sConn.SetReadDeadline(time.Now().Add(udp_timeout))
+	sConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
 	if RLen, err = sConn.Read(buffer[2:]); RLen <= 0 || err != nil {
 		return
 	}
@@ -65,30 +65,35 @@ func dns_tcpOverUdp(cConn *net.TCPConn, host string, buffer []byte) {
 	cConn.Write(buffer[:2+RLen])
 }
 
-func Respond_HttpDNS(cConn *net.TCPConn, header []byte) bool {
-	var domain string
-	httpDNS_DomainSub := bytes.Index(header[:], []byte("?dn="))
+func Respond_HttpDNS(cConn net.Conn, header []byte) bool {
+	var domainBegin string
+	httpDNS_DomainSub := bytes.Index(header[:], []byte("dn="))
 	if httpDNS_DomainSub < 0 {
 		return false
 	}
-	if _, err := fmt.Sscanf(string(header[httpDNS_DomainSub+4:]), "%s", &domain); err != nil {
+	if _, err := fmt.Sscanf(string(header[httpDNS_DomainSub+3:]), "%s", &domainBegin); err != nil {
 		log.Println(err)
 		return false
 	}
-	log.Println("httpDNS domain: [" + domain + "]")
+	domain := strings.Split(domainBegin, "&")
+	//log.Println("httpDNS domain: [" + domain[0] + "]")
 	defer cConn.Close()
-	ips, err := net.LookupHost(domain)
+	ips, err := net.LookupHost(domain[0])
 	if err != nil {
 		cConn.Write([]byte("HTTP/1.0 404 Not Found\r\nConnection: Close\r\nServer: CuteBi Linux Network httpDNS, (%>w<%)\r\nContent-type: charset=utf-8\r\n\r\n<html><head><title>HTTP DNS Server</title></head><body>查询域名失败<br/><br/>By: 萌萌萌得不要不要哒<br/>E-mail: 915445800@qq.com</body></html>"))
-		log.Println("httpDNS domain: [" + domain + "], Lookup failed")
+		//log.Println("httpDNS domain: [" + domain[0] + "], Lookup failed")
 	} else {
+		isIpv6 := bytes.Contains(header[:], []byte("type=AAAA"))
 		for i := 0; i < len(ips); i++ {
-			if strings.Contains(ips[i], ":") == false { //跳过ipv6
-				fmt.Fprintf(cConn, "HTTP/1.0 200 OK\r\nConnection: Close\r\nServer: CuteBi Linux Network httpDNS, (%%>w<%%)\r\nContent-Length: %d\r\n\r\n%s", len(string(ips[i])), string(ips[i]))
+			if strings.Contains(ips[i], ":") /*只有ipv6才包含':'*/ == isIpv6 {
+				if bytes.Contains(header[:], []byte("ttl=1")) {
+					ips[i] += ",60"
+				}
+				fmt.Fprintf(cConn, "HTTP/1.0 200 OK\r\nConnection: Close\r\nServer: CuteBi Linux Network httpDNS, (%%>w<%%)\r\nContent-Length: %d\r\n\r\n%s", len(ips[i]), ips[i])
 				break
 			}
 		}
-		log.Println("httpDNS domain: ["+domain+"], IPS: ", ips)
+		//log.Println("httpDNS domain: ["+domain[0]+"], IPS: ", ips)
 	}
 	return true
 }

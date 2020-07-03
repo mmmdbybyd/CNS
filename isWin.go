@@ -3,11 +3,11 @@
 // isWin.go
 package main
 
-import (
+/*
 	"log"
 	"net"
 	"syscall"
-)
+*/
 
 func setMaxNofile() {
 }
@@ -15,6 +15,7 @@ func setMaxNofile() {
 func setsid() {
 }
 
+/*
 func enableTcpFastopen(listener *net.TCPListener) {
 	const CNS_TCP_FASTOPEN int = 0x17
 	f, _ := listener.File()
@@ -22,3 +23,4 @@ func enableTcpFastopen(listener *net.TCPListener) {
 		log.Println(err)
 	}
 }
+*/

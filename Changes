@@ -10,3 +10,10 @@
 
 0.2.2
     CNS自动设置Max open files的值为1048576
+
+0.3
+    命令行参数改为读取json配置文件
+    删除tcpFastOpen, tcpKeepAlive功能
+    添加tls加密传输
+    httpDNS添加ipv6支持
+    添加同时监听多个地址

@@ -3,14 +3,13 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"net"
 	"time"
 )
 
 type UdpSession struct {
-	cConn                                                            *net.TCPConn
+	cConn                                                            net.Conn
 	udpSConn                                                         *net.UDPConn
 	c2s_CuteBi_XorCrypt_passwordSub, s2c_CuteBi_XorCrypt_passwordSub int
 }
@@ -27,13 +26,13 @@ func (udpSess *UdpSession) udpServerToClient() {
 	)
 	payload := make([]byte, 65536)
 	for {
-		udpSess.cConn.SetReadDeadline(time.Now().Add(udp_timeout))
-		udpSess.udpSConn.SetReadDeadline(time.Now().Add(udp_timeout))
+		udpSess.cConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
+		udpSess.udpSConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
 		payload_len, RAddr, err = udpSess.udpSConn.ReadFromUDP(payload[24:] /*24为httpUDP协议头保留使用*/)
 		if err != nil || payload_len <= 0 {
 			return
 		}
-		fmt.Println("readUdpServerLen: ", payload_len, "RAddr: ", RAddr.String())
+		//fmt.Println("readUdpServerLen: ", payload_len, "RAddr: ", RAddr.String())
 		if bytes.HasPrefix(RAddr.IP, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff}) == true {
 			/* ipv4 */
 			ignore_head_len = 12                 //数组前面的12字节不需要
@@ -54,7 +53,7 @@ func (udpSess *UdpSession) udpServerToClient() {
 		if len(CuteBi_XorCrypt_password) != 0 {
 			udpSess.s2c_CuteBi_XorCrypt_passwordSub = CuteBi_XorCrypt(payload[ignore_head_len:24+payload_len], udpSess.s2c_CuteBi_XorCrypt_passwordSub)
 		}
-		udpSess.cConn.SetWriteDeadline(time.Now().Add(udp_timeout))
+		udpSess.cConn.SetWriteDeadline(time.Now().Add(config.Udp_timeout))
 		if WLen, err = udpSess.cConn.Write(payload[ignore_head_len : 24+payload_len]); err != nil || WLen <= 0 {
 			return
 		}
@@ -116,8 +115,8 @@ func (udpSess *UdpSession) udpClientToServer(httpUDP_data []byte) {
 		payload_len = copy(payload, httpUDP_data[WLen:])
 	}
 	for {
-		udpSess.cConn.SetReadDeadline(time.Now().Add(udp_timeout))
-		udpSess.udpSConn.SetReadDeadline(time.Now().Add(udp_timeout))
+		udpSess.cConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
+		udpSess.udpSConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
 		RLen, err = udpSess.cConn.Read(payload[payload_len:])
 		if err != nil || RLen <= 0 {
 			return
@@ -158,8 +157,8 @@ func (udpSess *UdpSession) initUdp(httpUDP_data []byte) bool {
 	return true
 }
 
-func handleUdpSession(cConn *net.TCPConn, httpUDP_data []byte) {
-	defer log.Println("A udp client close")
+func handleUdpSession(cConn net.Conn, httpUDP_data []byte) {
+	//defer log.Println("A udp client close")
 
 	udpSess := new(UdpSession)
 	udpSess.cConn = cConn
@@ -168,7 +167,7 @@ func handleUdpSession(cConn *net.TCPConn, httpUDP_data []byte) {
 		log.Println("Is not httpUDP protocol or Decrypt failed")
 		return
 	}
-	log.Println("Start udpForward")
+	//log.Println("Start udpForward")
 	go udpSess.udpClientToServer(httpUDP_data)
 	udpSess.udpServerToClient()
 }
