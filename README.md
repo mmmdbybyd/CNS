@@ -26,6 +26,10 @@
 go build -o cns  
 ~~~~~
   
+##### 启动命令:  
+~~~~~
+./cns -daemon=true -json=cns.json  #配置文件格式请查看config文件夹
+  
 ##### Linux一键:  
 ~~~~~
 安装: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://pros.cutebi.xyz:666/cns/cns.sh && sh cns.sh
