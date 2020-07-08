@@ -1,4 +1,3 @@
-// dns.go
 package main
 
 import (
@@ -11,7 +10,7 @@ import (
 )
 
 func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
-	log.Println("Start dns_tcpOverUdp")
+	//log.Println("Start dns_tcpOverUdp")
 	defer cConn.Close()
 
 	var err error

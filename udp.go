@@ -1,4 +1,3 @@
-// udp.go
 package main
 
 import (

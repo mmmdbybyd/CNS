@@ -11,32 +11,29 @@
 	"//": "设定请求头中获取host的key, 默认Host",
 	"proxy_key": "Host",
 
-	"//": "加密密码, 默认为空(普通http_tunnel代理)",
+	"//": "加密密码, 默认没有密码(普通http_tunnel代理)",
 	"encrypt_password": "password",
 
-	"//": "开启tcpDNS转udpDNS, 可稍微加快解析速度, 默认关闭",
+	"//": "开启tcpDNS转udpDNS, 可稍微加快DNS解析速度, 默认关闭",
 	"Enable_dns_tcpOverUdp": true,
 
-	"//": "开启httpDNS, httpDNS无需http_tunnel握手, 可稍微加快解析速度, 默认关闭",
+	"//": "开启httpDNS, httpDNS无需http_tunnel握手, 可稍微加快DNS解析速度, 默认关闭",
 	"Enable_httpDNS": true,
 
+	"//": "开启tcpFastOpen, 可稍微加快创建连接速度(免流可能不适用), 默认关闭",
+	"Enable_TFO": true,
+
 	"//": "以下是tls配置",
-	"Tls": [
-		{
-			"//": "tls监听地址, 可设置多个",
-			"listen_addr": ["127.0.0.1:8978", "127.0.0.1:1224", ":9635"],
+	"Tls": {
+		"//": "tls监听地址, 可设置多个",
+		"listen_addr": ["127.0.0.1:8978", "[::1]:1224", ":9635"],
 
-			"//": "自动生成指定host的ssl/tls证书",
-			"AutoCertHosts": ["m.baidu.com", "yaohuo.me", "mymy.ip"],
+		"//": "自动生成指定host的ssl/tls证书",
+		"AutoCertHosts": ["m.baidu.com", "yaohuo.me", "mymy.ip"],
 
-			"//": "手动指定cert和key文件, 两者必须同时存在",
-			"cert_file": "cert.pem",
-			"key_file": "key.pem"
-		}, {
-			"//": "可以设定多个tls配置",
-			"listen_addr": [":8866"],
-			"AutoCertHosts": ["m.baidu.com", "yaohuo.me", "mymy.ip"]
-		}
-	]
+		"//": "手动指定cert和key文件, 两者必须同时存在",
+		"cert_file": "cert.pem",
+		"key_file": "key.pem"
+	}
 }
 

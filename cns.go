@@ -1,4 +1,3 @@
-// cns.go
 package main
 
 import (
@@ -16,11 +15,11 @@ import (
 )
 
 type JsonConfig struct {
-	Tls                                             []TlsServer
-	Listen_addr                                     []string
-	Proxy_key, Udp_flag, Encrypt_password, Pid_path string
-	Tcp_timeout, Udp_timeout                        time.Duration
-	Enable_dns_tcpOverUdp, Enable_httpDNS           bool
+	Tls                                               TlsServer
+	Listen_addr                                       []string
+	Proxy_key, Udp_flag, Encrypt_password, Pid_path   string
+	Tcp_timeout, Udp_timeout                          time.Duration
+	Enable_dns_tcpOverUdp, Enable_httpDNS, Enable_TFO bool
 }
 
 var config = JsonConfig{
@@ -67,13 +66,12 @@ func handleCmd() {
 	flag.BoolVar(&enable_daemon, "daemon", false, "daemon mode switch")
 	flag.BoolVar(&help, "h", false, "")
 	flag.BoolVar(&help, "help", false, "display this message")
-	//flag.Set("json", "E:\\go\\src\\CNS\\config.json")
 
 	flag.Parse()
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.3\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
+			"CuteBi Network Server 0.3.1\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -112,8 +110,11 @@ func initProcess() {
 func main() {
 	initProcess()
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	for i := len(config.Tls) - 1; i >= 0; i-- {
-		go config.Tls[i].startTls()
+	if config.Tls.AutoCertHosts != nil || (config.Tls.CertFile != "" && config.Tls.KeyFile != "") {
+		config.Tls.makeCertificateConfig()
+		for i := len(config.Tls.Listen_addr) - 1; i >= 0; i-- {
+			go config.Tls.startTls(config.Tls.Listen_addr[i])
+		}
 	}
 	for i := len(config.Listen_addr) - 1; i >= 0; i-- {
 		go startHttpTunnel(config.Listen_addr[i])

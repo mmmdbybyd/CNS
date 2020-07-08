@@ -17,3 +17,7 @@
     添加tls加密传输
     httpDNS添加ipv6支持
     添加同时监听多个地址
+
+0.3.1
+    重新添加tcpFastOpen功能
+    取消多个tls配置

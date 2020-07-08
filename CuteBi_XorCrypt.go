@@ -1,4 +1,3 @@
-// CuteBi_XorCrypt.go
 package main
 
 import (

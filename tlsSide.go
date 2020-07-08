@@ -1,4 +1,3 @@
-// tlsHandle
 package main
 
 import (
@@ -11,15 +10,19 @@ import (
 	"encoding/pem"
 	"log"
 	"math/big"
+	"net"
 	"time"
+
+	"./tfo"
 )
 
 type TlsServer struct {
 	Listen_addr, AutoCertHosts []string
 	CertFile, KeyFile          string
+	tlsConfig                  *tls.Config
 }
 
-func createSSLcertificate(hosts string) ([]byte, []byte) {
+func createCertificate(hosts string) ([]byte, []byte) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	notBefore := time.Now()
 	notAfter := notBefore.Add(365 * 24 * time.Hour)
@@ -59,19 +62,19 @@ func createSSLcertificate(hosts string) ([]byte, []byte) {
 	return certPEM, keyPEM
 }
 
-func (tlsConfig *TlsServer) startTls() {
+func (cnsTls *TlsServer) makeCertificateConfig() {
 	certs := make([]tls.Certificate, 0)
-	if tlsConfig.CertFile != "" && tlsConfig.KeyFile != "" {
-		cer, err := tls.LoadX509KeyPair(tlsConfig.CertFile, tlsConfig.KeyFile)
+	if cnsTls.CertFile != "" && cnsTls.KeyFile != "" {
+		cer, err := tls.LoadX509KeyPair(cnsTls.CertFile, cnsTls.KeyFile)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		certs = append(certs, cer)
 	}
-	if tlsConfig.AutoCertHosts != nil {
-		for _, h := range tlsConfig.AutoCertHosts {
-			cer, err := tls.X509KeyPair(createSSLcertificate(h))
+	if cnsTls.AutoCertHosts != nil {
+		for _, h := range cnsTls.AutoCertHosts {
+			cer, err := tls.X509KeyPair(createCertificate(h))
 			if err != nil {
 				log.Println(err)
 				return
@@ -79,27 +82,34 @@ func (tlsConfig *TlsServer) startTls() {
 			certs = append(certs, cer)
 		}
 	}
+	cnsTls.tlsConfig = &tls.Config{Certificates: certs}
+}
 
-	handleFun := func(listenAddrString string) {
-		listener, err := tls.Listen("tcp", listenAddrString, &tls.Config{Certificates: certs})
+func (cnsTls *TlsServer) startTls(listen_addr string) {
+	var (
+		listener net.Listener
+		err      error
+	)
+
+	if config.Enable_TFO {
+		listener, err = tfo.Listen(listen_addr)
+	} else {
+		listener, err = net.Listen("tcp", listen_addr)
+	}
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	listener = tls.NewListener(listener, cnsTls.tlsConfig)
+
+	defer listener.Close()
+	for {
+		conn, err := listener.Accept()
 		if err != nil {
 			log.Println(err)
-			return
+			time.Sleep(3 * time.Second)
+			continue
 		}
-		defer listener.Close()
-
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				log.Println(err)
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			go handleConn(conn, make([]byte, 8192))
-		}
+		go handleTunnel(conn, make([]byte, 8192), nil)
 	}
-	for i := len(tlsConfig.Listen_addr) - 1; i > 0; i-- {
-		go handleFun(tlsConfig.Listen_addr[i])
-	}
-	handleFun(tlsConfig.Listen_addr[0])
 }

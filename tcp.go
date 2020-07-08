@@ -1,4 +1,3 @@
-// tcp.go
 package main
 
 import (
@@ -59,7 +58,7 @@ func getProxyHost(header []byte) string {
 
 /* 处理tcp会话 */
 func handleTcpSession(cConn net.Conn, header []byte) {
-	//defer log.Println("A tcp client close")
+	defer log.Println("A tcp client close")
 
 	/* 获取请求头中的host */
 	host := getProxyHost(header)
@@ -69,7 +68,7 @@ func handleTcpSession(cConn net.Conn, header []byte) {
 		cConn.Close()
 		return
 	}
-	//log.Println("proxyHost: " + host)
+	log.Println("proxyHost: " + host)
 	//tcpDNS over udpDNS
 	if config.Enable_dns_tcpOverUdp && strings.HasSuffix(host, ":53") == true {
 		dns_tcpOverUdp(cConn, host, header)
@@ -87,7 +86,8 @@ func handleTcpSession(cConn net.Conn, header []byte) {
 		return
 	}
 	/* 开始转发 */
-	//log.Println("Start tcpForward")
+	log.Println("Start tcpForward")
+
 	go tcpForward(cConn, sConn, make([]byte, 8192))
 	tcpForward(sConn, cConn, header)
 }

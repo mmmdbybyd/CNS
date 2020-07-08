@@ -1,11 +1,13 @@
-// http_tunnel.go
 package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"log"
 	"net"
 	"time"
+
+	"./tfo"
 )
 
 func isHttpHeader(header []byte) bool {
@@ -38,7 +40,7 @@ func rspHeader(header []byte) []byte {
 	}
 }
 
-func handleConn(cConn net.Conn, payload []byte) {
+func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
 	cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
 	RLen, err := cConn.Read(payload)
 	if err != nil || RLen <= 0 {
@@ -46,6 +48,10 @@ func handleConn(cConn net.Conn, payload []byte) {
 		return
 	}
 	if isHttpHeader(payload[:RLen]) == false {
+		/* 转为tls的conn */
+		if tlsConfig != nil {
+			cConn = tls.Server(cConn, tlsConfig)
+		}
 		handleUdpSession(cConn, payload[:RLen])
 	} else {
 		if config.Enable_httpDNS == false || Respond_HttpDNS(cConn, payload[:RLen]) == false { /*优先处理httpDNS请求*/
@@ -54,8 +60,12 @@ func handleConn(cConn net.Conn, payload []byte) {
 				return
 			}
 			if bytes.Contains(payload[:RLen], []byte(config.Udp_flag)) == true {
-				handleConn(cConn, payload) //httpUDP需要读取到二进制数据才进行处理
+				handleTunnel(cConn, payload, tlsConfig) //httpUDP需要读取到二进制数据才进行处理
 			} else {
+				/* 转为tls的conn */
+				if tlsConfig != nil {
+					cConn = tls.Server(cConn, tlsConfig)
+				}
 				handleTcpSession(cConn, payload)
 			}
 		}
@@ -63,7 +73,17 @@ func handleConn(cConn net.Conn, payload []byte) {
 }
 
 func startHttpTunnel(listen_addr string) {
-	listener, err := net.Listen("tcp", listen_addr)
+	var (
+		listener net.Listener
+		conn     net.Conn
+		err      error
+	)
+
+	if config.Enable_TFO {
+		listener, err = tfo.Listen(listen_addr)
+	} else {
+		listener, err = net.Listen("tcp", listen_addr)
+	}
 	if err != nil {
 		log.Println(err)
 		return
@@ -71,7 +91,6 @@ func startHttpTunnel(listen_addr string) {
 
 	defer listener.Close()
 
-	var conn net.Conn
 	for {
 		conn, err = listener.Accept()
 		if err != nil {
@@ -79,6 +98,6 @@ func startHttpTunnel(listen_addr string) {
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		go handleConn(conn, make([]byte, 8192))
+		go handleTunnel(conn, make([]byte, 8192), config.Tls.tlsConfig)
 	}
 }
