@@ -21,3 +21,7 @@
 0.3.1
     重新添加tcpFastOpen功能
     取消多个tls配置
+
+0.3.2
+    修复tunnel握手后转为tls的情况下udp无法代理
+    优化TFO

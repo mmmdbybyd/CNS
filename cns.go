@@ -71,7 +71,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.3.1\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
+			"CuteBi Network Server 0.3.2\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -89,6 +89,11 @@ func handleCmd() {
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
+	}
+	//有效uid不为0(root)的关闭tfo
+	if config.Enable_TFO == true && os.Geteuid() != 0 {
+		config.Enable_TFO = false
+		fmt.Println("TFO cannot be opened: CNS effective UID isn't 0(root).")
 	}
 	if config.Pid_path != "" {
 		pidSaveToFile(config.Pid_path)

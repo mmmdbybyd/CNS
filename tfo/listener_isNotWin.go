@@ -4,7 +4,6 @@ package tfo
 
 import (
 	"bytes"
-	"context"
 	"net"
 	"os"
 	"syscall"
@@ -20,47 +19,49 @@ type tfoListener struct {
 	ServerAddr [16]byte
 	ServerPort int
 	fd         int
-	ctx        context.Context
 }
 
 // Listen will listen given host and give back a Listener which implement the net.Listener
 func Listen(host string) (Listener, error) {
 	r := &tfoListener{}
 
-	addr, err := net.ResolveTCPAddr("tcp", host)
-	if err != nil {
-		return nil, err
+	addr, err := net.ResolveTCPAddr("tcp6", host)
+	if err == nil {
+		//addr.IP存放的是ipv6地址，直接复制
+		copy(r.ServerAddr[:], addr.IP)
+	} else {
+		//不是ipv6地址，尝试解析ipv4地址
+		addr, err = net.ResolveTCPAddr("tcp4", host)
+		if err != nil {
+			return nil, err
+		}
+		if bytes.HasSuffix(addr.IP, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) {
+			//addr.IP前4字节存放ipv4地址，转为ipv4映射ipv6
+			copy(r.ServerAddr[:12], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff})
+			copy(r.ServerAddr[12:], addr.IP[:4])
+		} else {
+			//addr.IP存放的是ipv4映射ipv6地址  直接复制
+			copy(r.ServerAddr[:], addr.IP)
+		}
 	}
 	r.ServerPort = addr.Port
-	copy(r.ServerAddr[:], addr.IP)
-	/* 如果为ipv4格式则转为ipv4映射ipv6格式 */
-	if bytes.HasSuffix(r.ServerAddr[:], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) {
-		copy(r.ServerAddr[12:], r.ServerAddr[:4])
-		copy(r.ServerAddr[:12], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff})
-	}
-	sa := &syscall.SockaddrInet6{Addr: r.ServerAddr, Port: r.ServerPort}
 
-	fd, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_STREAM, 0)
+	r.fd, err = syscall.Socket(syscall.AF_INET6, syscall.SOCK_STREAM, 0)
 	if err != nil {
 		if err == syscall.ENOPROTOOPT {
 			return nil, ErrTFONotSupport
 		}
 		return nil, err
 	}
-	r.fd = fd
-
 	syscall.SetsockoptInt(r.fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
-
-	err = syscall.Bind(r.fd, sa)
+	err = syscall.Bind(r.fd, &syscall.SockaddrInet6{Addr: r.ServerAddr, Port: r.ServerPort})
 	if err != nil {
 		return nil, err
 	}
-
 	err = syscall.SetsockoptInt(r.fd, syscall.IPPROTO_TCP, TCPFastOpen, 3)
 	if err != nil {
 		return nil, err
 	}
-
 	err = syscall.Listen(r.fd, ListenBacklog)
 	if err != nil {
 		return nil, err

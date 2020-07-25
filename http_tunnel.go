@@ -59,13 +59,13 @@ func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
 				cConn.Close()
 				return
 			}
+			/* 转为tls的conn */
+			if tlsConfig != nil {
+				cConn = tls.Server(cConn, tlsConfig)
+			}
 			if bytes.Contains(payload[:RLen], []byte(config.Udp_flag)) == true {
-				handleTunnel(cConn, payload, tlsConfig) //httpUDP需要读取到二进制数据才进行处理
+				handleUdpSession(cConn, nil)
 			} else {
-				/* 转为tls的conn */
-				if tlsConfig != nil {
-					cConn = tls.Server(cConn, tlsConfig)
-				}
 				handleTcpSession(cConn, payload)
 			}
 		}

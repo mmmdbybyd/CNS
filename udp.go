@@ -105,13 +105,16 @@ func (udpSess *UdpSession) udpClientToServer(httpUDP_data []byte) {
 
 	var payload_len, RLen, WLen int
 	var err error
-	WLen = udpSess.writeToServer(httpUDP_data)
-	if WLen == -1 {
-		return
-	}
+
 	payload := make([]byte, 65536)
-	if WLen < len(httpUDP_data) {
-		payload_len = copy(payload, httpUDP_data[WLen:])
+	if httpUDP_data != nil {
+		WLen = udpSess.writeToServer(httpUDP_data)
+		if WLen == -1 {
+			return
+		}
+		if WLen < len(httpUDP_data) {
+			payload_len = copy(payload, httpUDP_data[WLen:])
+		}
 	}
 	for {
 		udpSess.cConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
@@ -137,7 +140,7 @@ func (udpSess *UdpSession) udpClientToServer(httpUDP_data []byte) {
 }
 
 func (udpSess *UdpSession) initUdp(httpUDP_data []byte) bool {
-	if len(CuteBi_XorCrypt_password) != 0 {
+	if httpUDP_data != nil && len(CuteBi_XorCrypt_password) != 0 {
 		de := make([]byte, 5)
 		copy(de, httpUDP_data[0:5])
 		CuteBi_XorCrypt(de, 0)
