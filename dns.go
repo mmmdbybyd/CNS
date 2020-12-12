@@ -10,7 +10,7 @@ import (
 )
 
 func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
-	//log.Println("Start dns_tcpOverUdp")
+	log.Println("Start dns_tcpOverUdp")
 	defer cConn.Close()
 
 	var err error
@@ -20,6 +20,7 @@ func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
 		cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
 		RLen, err = cConn.Read(buffer[payloadLen:])
 		if RLen <= 0 || err != nil {
+			log.Println("cConn.Read():", err)
 			return
 		}
 		//解密
@@ -48,12 +49,15 @@ func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
 	}
 	defer sConn.Close()
 	if WLen, err = sConn.Write(buffer[2:payloadLen]); WLen <= 0 || err != nil {
+		log.Println("sConn.Write():", err)
 		return
 	}
 	sConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
 	if RLen, err = sConn.Read(buffer[2:]); RLen <= 0 || err != nil {
+		log.Println("sConn.Read():", err)
 		return
 	}
+	fmt.Println("sConn.Read():", RLen)
 	//包长度转换
 	buffer[0] = byte(RLen >> 8)
 	buffer[1] = byte(RLen)

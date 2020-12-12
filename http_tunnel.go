@@ -6,8 +6,6 @@ import (
 	"log"
 	"net"
 	"time"
-
-	"./tfo"
 )
 
 func isHttpHeader(header []byte) bool {
@@ -42,6 +40,7 @@ func rspHeader(header []byte) []byte {
 
 func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
 	cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
+
 	RLen, err := cConn.Read(payload)
 	if err != nil || RLen <= 0 {
 		cConn.Close()
@@ -79,10 +78,9 @@ func startHttpTunnel(listen_addr string) {
 		err      error
 	)
 
+	listener, err = net.Listen("tcp", listen_addr)
 	if config.Enable_TFO {
-		listener, err = tfo.Listen(listen_addr)
-	} else {
-		listener, err = net.Listen("tcp", listen_addr)
+		enableTcpFastopen(listener)
 	}
 	if err != nil {
 		log.Println(err)

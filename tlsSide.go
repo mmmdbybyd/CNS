@@ -12,8 +12,6 @@ import (
 	"math/big"
 	"net"
 	"time"
-
-	"./tfo"
 )
 
 type TlsServer struct {
@@ -71,8 +69,10 @@ func (cnsTls *TlsServer) makeCertificateConfig() {
 			return
 		}
 		certs = append(certs, cer)
-	}
-	if cnsTls.AutoCertHosts != nil {
+	} else {
+		if cnsTls.AutoCertHosts == nil {
+			cnsTls.AutoCertHosts = []string{""}
+		}
 		for _, h := range cnsTls.AutoCertHosts {
 			cer, err := tls.X509KeyPair(createCertificate(h))
 			if err != nil {
@@ -91,10 +91,9 @@ func (cnsTls *TlsServer) startTls(listen_addr string) {
 		err      error
 	)
 
+	listener, err = net.Listen("tcp", listen_addr)
 	if config.Enable_TFO {
-		listener, err = tfo.Listen(listen_addr)
-	} else {
-		listener, err = net.Listen("tcp", listen_addr)
+		enableTcpFastopen(listener)
 	}
 	if err != nil {
 		log.Println(err)

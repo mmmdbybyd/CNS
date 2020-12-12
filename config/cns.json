@@ -21,14 +21,14 @@
 	"Enable_httpDNS": true,
 
 	"//": "开启tcpFastOpen, 可稍微加快创建连接速度(免流可能不适用), 默认关闭",
-	"Enable_TFO": true,
+	"Enable_TFO": false,
 
 	"//": "以下是tls配置",
 	"Tls": {
 		"//": "tls监听地址, 可设置多个",
 		"listen_addr": ["127.0.0.1:8978", "[::1]:1224", ":9635"],
 
-		"//": "自动生成指定host的ssl/tls证书",
+		"//": "自动生成指定host的ssl/tls证书(如果留空则所有host都可以连接)",
 		"AutoCertHosts": ["m.baidu.com", "yaohuo.me", "mymy.ip"],
 
 		"//": "手动指定cert和key文件, 两者必须同时存在",

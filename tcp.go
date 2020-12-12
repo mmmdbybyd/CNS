@@ -11,22 +11,24 @@ import (
 
 /* 把fromConn的数据转发到toConn */
 func tcpForward(fromConn, toConn net.Conn, payload []byte) {
-	defer fromConn.Close()
-	defer toConn.Close()
+	defer func() {
+		fromConn.Close()
+		toConn.Close()
+	}()
 
-	var RLen, CuteBi_XorCrypt_passwordSub int
+	var RLen, WLen, CuteBi_XorCrypt_passwordSub int
 	var err error
 	for {
 		fromConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
 		toConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
-		if RLen, err = fromConn.Read(payload); err != nil {
+		if RLen, err = fromConn.Read(payload); err != nil || RLen <= 0 {
 			return
 		}
 		if len(CuteBi_XorCrypt_password) != 0 {
 			CuteBi_XorCrypt_passwordSub = CuteBi_XorCrypt(payload[:RLen], CuteBi_XorCrypt_passwordSub)
 		}
 		toConn.SetWriteDeadline(time.Now().Add(config.Tcp_timeout))
-		if _, err = toConn.Write(payload[:RLen]); err != nil {
+		if WLen, err = toConn.Write(payload[:RLen]); err != nil || WLen <= 0 {
 			return
 		}
 	}

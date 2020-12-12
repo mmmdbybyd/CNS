@@ -71,7 +71,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.3.2\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: 915445800@qq.com\n")
+			"CuteBi Network Server 0.3.3\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -81,6 +81,11 @@ func handleCmd() {
 		os.Exit(1)
 	}
 	if enable_daemon == true {
+		/*
+			cmd := exec.Command(os.Args[0], []string(append(os.Args[1:], "-daemon=false"))...)
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+			cmd.Start()
+		*/
 		exec.Command(os.Args[0], []string(append(os.Args[1:], "-daemon=false"))...).Start()
 		os.Exit(0)
 	}
@@ -93,7 +98,7 @@ func handleCmd() {
 	//有效uid不为0(root)的关闭tfo
 	if config.Enable_TFO == true && os.Geteuid() != 0 {
 		config.Enable_TFO = false
-		fmt.Println("TFO cannot be opened: CNS effective UID isn't 0(root).")
+		fmt.Println("Warnning: TFO cannot be opened: CNS effective UID isn't 0(root).")
 	}
 	if config.Pid_path != "" {
 		pidSaveToFile(config.Pid_path)
@@ -115,7 +120,7 @@ func initProcess() {
 func main() {
 	initProcess()
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	if config.Tls.AutoCertHosts != nil || (config.Tls.CertFile != "" && config.Tls.KeyFile != "") {
+	if len(config.Tls.Listen_addr) > 0 {
 		config.Tls.makeCertificateConfig()
 		for i := len(config.Tls.Listen_addr) - 1; i >= 0; i-- {
 			go config.Tls.startTls(config.Tls.Listen_addr[i])
