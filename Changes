@@ -26,6 +26,7 @@
     修复tunnel握手后转为tls的情况下udp无法代理
     优化TFO
 
-0.3.3
-    使用syscall设置TFO
-    tls可以不设置域名或证书(默认所有域名都可以)
+0.4
+    buffer使用内存池
+    添加崩溃自动重启的功能
+    添加tcpKeepAlive

@@ -71,7 +71,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.3.3\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
+			"CuteBi Network Server 0.4\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -95,11 +95,6 @@ func handleCmd() {
 		log.Println(err)
 		os.Exit(1)
 	}
-	//有效uid不为0(root)的关闭tfo
-	if config.Enable_TFO == true && os.Geteuid() != 0 {
-		config.Enable_TFO = false
-		fmt.Println("Warnning: TFO cannot be opened: CNS effective UID isn't 0(root).")
-	}
 	if config.Pid_path != "" {
 		pidSaveToFile(config.Pid_path)
 	}
@@ -110,8 +105,35 @@ func handleCmd() {
 	config.Udp_timeout *= time.Second
 }
 
+func strarChileProc() {
+	if os.Getenv("CHILD_PORC") != "true" {
+		var runCmd exec.Cmd
+
+		cmd := exec.Command(os.Args[0], os.Args[1:]...)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		cmd.Env = []string{"CHILD_PORC=true"}
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP, syscall.SIGQUIT)
+		go func() {
+			<-sigCh
+			cmd = nil
+			runCmd.Process.Kill()
+		}()
+		for {
+			if cmd == nil {
+				os.Exit(1)
+			}
+			//同一个内存的exec.Cmd不能重复启动程序，所以需要复制到新的内存
+			runCmd = *cmd
+			runCmd.Run()
+		}
+	}
+}
+
 func initProcess() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	handleCmd()
+	strarChileProc()
 	setsid()
 	setMaxNofile()
 	signal.Ignore(syscall.SIGPIPE)
@@ -119,6 +141,11 @@ func initProcess() {
 
 func main() {
 	initProcess()
+	//有效uid不为0(root)的关闭tfo
+	if config.Enable_TFO == true && os.Geteuid() != 0 {
+		config.Enable_TFO = false
+		fmt.Println("Warnning: TFO cannot be opened: CNS effective UID isn't 0(root).")
+	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if len(config.Tls.Listen_addr) > 0 {
 		config.Tls.makeCertificateConfig()

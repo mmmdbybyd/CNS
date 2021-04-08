@@ -10,7 +10,7 @@ import (
 )
 
 func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
-	log.Println("Start dns_tcpOverUdp")
+	// log.Println("Start dns_tcpOverUdp")
 	defer cConn.Close()
 
 	var err error
@@ -57,7 +57,7 @@ func dns_tcpOverUdp(cConn net.Conn, host string, buffer []byte) {
 		log.Println("sConn.Read():", err)
 		return
 	}
-	fmt.Println("sConn.Read():", RLen)
+	// log.Println("sConn.Read():", RLen)
 	//包长度转换
 	buffer[0] = byte(RLen >> 8)
 	buffer[1] = byte(RLen)

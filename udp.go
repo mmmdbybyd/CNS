@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -13,9 +14,13 @@ type UdpSession struct {
 	c2s_CuteBi_XorCrypt_passwordSub, s2c_CuteBi_XorCrypt_passwordSub int
 }
 
+var udpBufferPool sync.Pool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 65536)
+	},
+}
+
 func (udpSess *UdpSession) udpServerToClient() {
-	defer udpSess.cConn.Close()
-	defer udpSess.udpSConn.Close()
 
 	/* 不要在for里用:=申请变量, 否则每次循环都会重新申请内存 */
 	var (
@@ -23,7 +28,14 @@ func (udpSess *UdpSession) udpServerToClient() {
 		payload_len, ignore_head_len, WLen int
 		err                                error
 	)
-	payload := make([]byte, 65536)
+	payload := udpBufferPool.Get().([]byte)
+
+	defer func() {
+		udpBufferPool.Put(payload)
+		udpSess.cConn.Close()
+		udpSess.udpSConn.Close()
+	}()
+
 	for {
 		udpSess.cConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
 		udpSess.udpSConn.SetReadDeadline(time.Now().Add(config.Udp_timeout))
@@ -100,13 +112,16 @@ func (udpSess *UdpSession) writeToServer(httpUDP_data []byte) int {
 }
 
 func (udpSess *UdpSession) udpClientToServer(httpUDP_data []byte) {
-	defer udpSess.cConn.Close()
-	defer udpSess.udpSConn.Close()
-
 	var payload_len, RLen, WLen int
 	var err error
+	payload := udpBufferPool.Get().([]byte)
 
-	payload := make([]byte, 65536)
+	defer func() {
+		udpBufferPool.Put(payload)
+		udpSess.cConn.Close()
+		udpSess.udpSConn.Close()
+	}()
+
 	if httpUDP_data != nil {
 		WLen = udpSess.writeToServer(httpUDP_data)
 		if WLen == -1 {

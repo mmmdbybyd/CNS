@@ -86,29 +86,28 @@ func (cnsTls *TlsServer) makeCertificateConfig() {
 }
 
 func (cnsTls *TlsServer) startTls(listen_addr string) {
-	var (
-		listener net.Listener
-		err      error
-	)
+	var conn *net.TCPConn
 
-	listener, err = net.Listen("tcp", listen_addr)
+	listener, err := net.Listen("tcp", listen_addr)
 	if config.Enable_TFO {
 		enableTcpFastopen(listener)
 	}
+	defer listener.Close()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	listener = tls.NewListener(listener, cnsTls.tlsConfig)
+	tcpListener := listener.(*net.TCPListener)
 
-	defer listener.Close()
 	for {
-		conn, err := listener.Accept()
+		conn, err = tcpListener.AcceptTCP()
 		if err != nil {
 			log.Println(err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		go handleTunnel(conn, make([]byte, 8192), nil)
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(time.Minute)
+		go handleTunnel(tls.Server(conn, cnsTls.tlsConfig), tcpBufferPool.Get().([]byte), nil)
 	}
 }

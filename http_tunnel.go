@@ -39,8 +39,9 @@ func rspHeader(header []byte) []byte {
 }
 
 func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
-	cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
+	defer tcpBufferPool.Put(payload)
 
+	cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
 	RLen, err := cConn.Read(payload)
 	if err != nil || RLen <= 0 {
 		cConn.Close()
@@ -72,30 +73,28 @@ func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
 }
 
 func startHttpTunnel(listen_addr string) {
-	var (
-		listener net.Listener
-		conn     net.Conn
-		err      error
-	)
+	var conn *net.TCPConn
 
-	listener, err = net.Listen("tcp", listen_addr)
+	listener, err := net.Listen("tcp", listen_addr)
 	if config.Enable_TFO {
 		enableTcpFastopen(listener)
 	}
+	defer listener.Close()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	defer listener.Close()
+	tcpListener := listener.(*net.TCPListener)
 
 	for {
-		conn, err = listener.Accept()
+		conn, err = tcpListener.AcceptTCP()
 		if err != nil {
 			log.Println(err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
-		go handleTunnel(conn, make([]byte, 8192), config.Tls.tlsConfig)
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(time.Minute)
+		go handleTunnel(conn, tcpBufferPool.Get().([]byte), config.Tls.tlsConfig)
 	}
 }
