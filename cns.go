@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 )
@@ -71,7 +70,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.4\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
+			"CuteBi Network Server 0.4.1\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -94,9 +93,6 @@ func handleCmd() {
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
-	}
-	if config.Pid_path != "" {
-		pidSaveToFile(config.Pid_path)
 	}
 	config.Enable_httpDNS = true
 	config.Proxy_key = "\n" + config.Proxy_key + ": "
@@ -146,7 +142,9 @@ func main() {
 		config.Enable_TFO = false
 		fmt.Println("Warnning: TFO cannot be opened: CNS effective UID isn't 0(root).")
 	}
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	if config.Pid_path != "" {
+		pidSaveToFile(config.Pid_path)
+	}
 	if len(config.Tls.Listen_addr) > 0 {
 		config.Tls.makeCertificateConfig()
 		for i := len(config.Tls.Listen_addr) - 1; i >= 0; i-- {

@@ -1,0 +1,16 @@
+{
+	"Tcp_timeout": 300,
+	"Udp_timeout": 30,
+	"Listen_addr": [":1254"],
+	"Keep_alive": 60,
+	"proxy_key": "Meng",
+	"encrypt_password": "666",
+	"Enable_dns_tcpOverUdp": true,
+	"Enable_httpDNS": true,
+	"Enable_TFO": true, 
+	"Tls": {
+		"listen_addr": [":8978"],
+		"AutoCertHosts": ["m.baidu.com", "yaohuo.me", "mymy.ip"]
+	}
+}
+

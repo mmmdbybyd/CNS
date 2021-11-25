@@ -82,7 +82,7 @@ func (cnsTls *TlsServer) makeCertificateConfig() {
 			certs = append(certs, cer)
 		}
 	}
-	cnsTls.tlsConfig = &tls.Config{Certificates: certs}
+	cnsTls.tlsConfig = &tls.Config{Certificates: certs,InsecureSkipVerify:false}
 }
 
 func (cnsTls *TlsServer) startTls(listen_addr string) {
