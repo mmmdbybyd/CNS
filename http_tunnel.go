@@ -41,21 +41,28 @@ func rspHeader(header []byte) []byte {
 func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
 	defer tcpBufferPool.Put(payload)
 
-	cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
-	RLen, err := cConn.Read(payload)
-	if err != nil || RLen <= 0 {
-		cConn.Close()
-		return
+	var payloadLen int
+	for {
+		cConn.SetReadDeadline(time.Now().Add(config.Tcp_timeout))
+		RLen, err := cConn.Read(payload)
+		if err != nil || RLen <= 0 {
+			cConn.Close()
+			return
+		}
+		payloadLen += RLen
+		if !isHttpHeader(payload[:payloadLen]) || bytes.HasSuffix(payload[:payloadLen], []byte("\n\r\n")) {
+			break
+		}
 	}
-	if isHttpHeader(payload[:RLen]) == false {
+	if isHttpHeader(payload[:payloadLen]) == false {
 		/* 转为tls的conn */
 		if tlsConfig != nil {
 			cConn = tls.Server(cConn, tlsConfig)
 		}
-		handleUdpSession(cConn, payload[:RLen])
+		handleUdpSession(cConn, payload[:payloadLen])
 	} else {
-		if config.Enable_httpDNS == false || Respond_HttpDNS(cConn, payload[:RLen]) == false { /*优先处理httpDNS请求*/
-			if WLen, err := cConn.Write(rspHeader(payload[:RLen])); err != nil || WLen <= 0 {
+		if config.Enable_httpDNS == false || Respond_HttpDNS(cConn, payload[:payloadLen]) == false { /*优先处理httpDNS请求*/
+			if WLen, err := cConn.Write(rspHeader(payload[:payloadLen])); err != nil || WLen <= 0 {
 				cConn.Close()
 				return
 			}
@@ -63,7 +70,7 @@ func handleTunnel(cConn net.Conn, payload []byte, tlsConfig *tls.Config) {
 			if tlsConfig != nil {
 				cConn = tls.Server(cConn, tlsConfig)
 			}
-			if bytes.Contains(payload[:RLen], []byte(config.Udp_flag)) == true {
+			if bytes.Contains(payload[:payloadLen], []byte(config.Udp_flag)) == true {
 				handleUdpSession(cConn, nil)
 			} else {
 				handleTcpSession(cConn, payload)
