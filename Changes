@@ -30,3 +30,6 @@
     buffer使用内存池
     添加崩溃自动重启的功能
     添加tcpKeepAlive
+
+0.4.2
+	http请求头必须读取到\r\n\r\n才开始处理数据
