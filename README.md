@@ -36,3 +36,6 @@ go build -o cns
 安装: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://binary.quicknet.cyou/cns/cns.sh && sh cns.sh  
 卸载: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://binary.quicknet.cyou/cns/cns.sh && sh cns.sh uninstall  
 ~~~~~
+
+##### AFF:  
+[快游戏机场](https://www.quick-connect.top)
