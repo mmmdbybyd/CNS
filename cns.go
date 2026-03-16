@@ -22,10 +22,11 @@ type JsonConfig struct {
 }
 
 var config = JsonConfig{
-	Proxy_key:   "Host",
-	Udp_flag:    "httpUDP",
-	Tcp_timeout: 600,
-	Udp_timeout: 30,
+	Proxy_key:      "Host",
+	Udp_flag:       "httpUDP",
+	Tcp_timeout:    600,
+	Udp_timeout:    30,
+	Enable_httpDNS: true,
 }
 
 func jsonLoad(filename string, v *JsonConfig) {
@@ -65,8 +66,8 @@ func handleCmd() {
 	flag.BoolVar(&enable_daemon, "daemon", false, "daemon mode switch")
 	flag.BoolVar(&help, "h", false, "")
 	flag.BoolVar(&help, "help", false, "display this message")
-
 	flag.Parse()
+
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
@@ -94,7 +95,6 @@ func handleCmd() {
 		log.Println(err)
 		os.Exit(1)
 	}
-	config.Enable_httpDNS = true
 	config.Proxy_key = "\n" + config.Proxy_key + ": "
 	CuteBi_XorCrypt_password = []byte(config.Encrypt_password)
 	config.Tcp_timeout *= time.Second
