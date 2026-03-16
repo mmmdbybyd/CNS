@@ -14,14 +14,14 @@
 
 ### 2. HTTP DNS 服务端
 
-- 请求中带 `dn=域名` 时，走 HTTP DNS 逻辑：对本机做 `net.LookupHost(domain)`，返回 IP。
-- 支持 `type=AAAA` 返回 IPv6，`ttl=1` 在响应中带 TTL（如 `60`）。
+- 请求uri参数中带 `dn=域名` 时，走 HTTP DNS 逻辑：对本机做 `net.LookupHost(domain)`，返回 IP。
+- 参数支持 `type=AAAA` 返回 IPv6，`ttl=1` 在响应中带 TTL。
 - 与 114DNS、腾讯 DNSPod 等 HTTP DNS 用法类似，本机解析、HTTP 响应。
 
 ### 3. TCP DNS 转 UDP DNS
 
 - 当目标 host 为 `*:53` 时，将客户端发来的 TCP DNS（2 字节长度 + 载荷）转为对同一 host 的 UDP DNS 请求，收到 UDP 应答后再按 TCP 长度前缀写回客户端。
-- 由配置项 `Enable_dns_tcpOverUdp` 控制。
+- 由配置项 `Enable_dns_tcpOverUdp` 控制，可解决部分DNS服务器不支持TCPDNS的问题。
 
 ### 4. UDP over HTTP 隧道（httpUDP）
 
@@ -31,31 +31,39 @@
 
 ### 5. TLS 与 TCP FastOpen
 
-- **TLS**：可单独配置 `Tls.listen_addr`，在这些地址上先做 TLS 服务端握手，再按上述同一套隧道逻辑处理（HTTP DNS / CONNECT / httpUDP）。也可在明文 `listen_addr` 上，若首包不是 HTTP 则当作 TLS 连接处理（用于 UDP over TLS）。
+- **TLS**：配置 `Tls.listen_addr`，在这些地址上先做 TLS 服务端握手，再按上述同一套隧道逻辑处理（HTTP DNS / CONNECT / httpUDP）。
 - **证书**：支持 `CertFile`/`KeyFile` 或 `AutoCertHosts`（按 host 自动生成 ECDSA P256 证书）。
 - **TCP FastOpen**：由 `Enable_TFO` 控制，仅在非 Windows 且进程有效 UID 为 0 时生效；Windows 下不启用。
 
-### 6. 其他
+---
 
-- 非 Windows：`setMaxNofile(1048576)`、`setsid`；守护进程通过子进程 + 信号处理实现。
-- 命令行：`-json` 指定配置文件，`-daemon=true` 时再起子进程并退出；`Pid_path` 可写 PID 文件。
+## 命令行参数说明
+
+| 参数 | 说明 |
+|--------|------|
+| `h` / `help` | 显示帮助 |
+| `json` | json配置文件路径 |
+| `daemon` | 值为true时开启守护进程 |
 
 ---
 
-## 配置说明（与代码对应）
+## 配置文件说明
 
 | 配置项 | 说明 |
 |--------|------|
-| `Listen_addr` | HTTP 隧道监听地址，可多个 |
-| `Tcp_timeout` / `Udp_timeout` | TCP、UDP 超时（秒，代码中会乘 `time.Second`） |
-| `Proxy_key` | 从请求头取目标 host 的 key，默认 `Host`（代码中会加前缀 `\n` + key + `: `） |
-| `Udp_flag` | 标识 httpUDP 的字符串，默认 `httpUDP` |
-| `Encrypt_password` | XOR 加密密码，空则不加密 |
-| `Enable_dns_tcpOverUdp` | 是否开启 TCP DNS 转 UDP DNS（目标 :53） |
-| `Enable_httpDNS` | 是否开启 HTTP DNS（代码中当前会强制设为 true） |
-| `Enable_TFO` | 是否开启 TCP FastOpen（仅 Linux + root） |
-| `Pid_path` | 可选，写入 PID 的文件路径 |
-| `Tls` | `Listen_addr`、`AutoCertHosts`、`CertFile`、`KeyFile` |
+| `Listen_addr` | 字符串数组，监听地址 |
+| `Tcp_timeout` / `Udp_timeout` | 数值，TCP、UDP 超时（单位：秒） |
+| `Proxy_key` | 字符串，从请求头取目标地址的 key，默认 `Host` |
+| `Udp_flag` | 字符串，HTTP请求头中标识 httpUDP 的字符串，默认 `httpUDP` |
+| `Encrypt_password` | 字符串， XOR 加密密码，空则不加密 |
+| `Enable_dns_tcpOverUdp` | 布尔，是否开启 TCP DNS 转 UDP DNS |
+| `Enable_httpDNS` | 布尔，是否开启 HTTP DNS（默认 `true`） |
+| `Enable_TFO` | 布尔，是否开启 TCP FastOpen（仅 Linux + root 生效） |
+| `Pid_path` | 字符串，可选，写入 PID 的文件路径 |
+| `Tls.Listen_addr` | 字符串数组，TLS监听地址 |
+| `Tls.AutoCertHosts` | 字符串数组，按 host 数组生成自签名的TLS证书 |
+| `Tls.CertFile` | 字符串，本地TLS证书文件路径 |
+| `Tls.KeyFile` | 字符串，本地TLS密钥文件路径 |
 
 示例配置见 [config/cns.json](config/cns.json)。
 
@@ -64,9 +72,17 @@
 ## 编译与运行
 
 ```bash
-go build -o cns
+go build -ldflags="-w -s" -trimpath -o cns
 ./cns -daemon=true -json=cns.json
 ```
+
+---
+
+## Linux一键:  
+~~~~~
+安装: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://binary.parso.org/cns/cns.sh && sh cns.sh  
+卸载: `type curl &>/dev/null && echo 'curl -O' || echo 'wget -O cns.sh'` http://binary.parso.org/cns/cns.sh && sh cns.sh uninstall  
+~~~~~
 
 ---
 
