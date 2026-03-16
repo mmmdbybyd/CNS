@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -30,7 +29,7 @@ var config = JsonConfig{
 }
 
 func jsonLoad(filename string, v *JsonConfig) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -71,7 +70,7 @@ func handleCmd() {
 	if help == true {
 		fmt.Println("　/) /)\n" +
 			"ฅ(՞•ﻌ•՞)ฅ\n" +
-			"CuteBi Network Server 0.4.2\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
+			"CuteBi Network Server 0.4.3\nAuthor: CuteBi(Mmmdbybyd)\nE-mail: supercutename@gmail.com\n")
 		flag.Usage()
 		os.Exit(0)
 	}
